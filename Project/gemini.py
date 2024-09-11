@@ -56,11 +56,12 @@ model = genai.GenerativeModel(
 
 chat_session = model.start_chat()
 
-while True:
-    input_text = input('input:  ')
+# while True:
+#     input_text = input('input:  ')
     
-    response = chat_session.send_message(input_text)
+#     response = chat_session.send_message(input_text)
 
-    data = json.loads(response.text)
+#     data = json.loads(response.text)
+#     print(type(data))
 
-    print(json.dumps(data, indent=4))
+#     print(json.dumps(data, indent=4))
