@@ -9,7 +9,7 @@ generation_config = {
     "temperature": 1,
     "top_p": 0.95,
     "top_k": 64,
-    "max_output_tokens": 8192,
+    "max_output_tokens": 500,
     "response_schema": content.Schema(
         type=content.Type.ARRAY,
         items=content.Schema(
@@ -18,8 +18,7 @@ generation_config = {
                 "place_name",
                 "country",
                 "city",
-                "coordinates_N",
-                "coordinates_E"
+                "street"
             ],
             properties={
                 "place_name": content.Schema(
@@ -31,14 +30,9 @@ generation_config = {
                 "city": content.Schema(
                     type=content.Type.STRING
                 ),
-                "coordinates_N": content.Schema(
-                    type=content.Type.NUMBER,
-                    format="float"
-                ),
-                "coordinates_E": content.Schema(
-                    type=content.Type.NUMBER,
-                    format="float"
-                ),
+                "street": content.Schema(
+                    type=content.Type.STRING
+                )
             }
         )
     ),
