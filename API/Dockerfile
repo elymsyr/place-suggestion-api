@@ -12,4 +12,4 @@ EXPOSE 80
 COPY ./app /code/app/
 
 # CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-CMD ["fastapi", "run", "app/main.py", "--port", "800"]
+CMD ["fastapi", "run", "app/main.py", "--port", "80"]
