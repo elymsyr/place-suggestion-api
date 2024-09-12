@@ -3,14 +3,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 import traceback
-from KEYS import *
-from gemini import chat_session, model
+from gemini import model
 from fastapi import FastAPI
-from io import StringIO
 from fastapi.responses import StreamingResponse
 
 app = FastAPI()
