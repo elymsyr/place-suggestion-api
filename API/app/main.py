@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
 import traceback
+from time import perf_counter
 import google.generativeai as genai
 from google.ai.generativelanguage_v1beta.types import content
 
@@ -97,11 +98,13 @@ def stream_response(response):
                         yield response_data
                     except: continue
 
-def scrape(query, gemini_api_key, language='en'):
+def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
+    start = perf_counter()
+    assert isinstance(max_worker, int)
     genai.configure(api_key=gemini_api_key)
     model = config_model()
     # Use ThreadPoolExecutor for parallel fetching
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=int(max_worker)) as executor:
         futures = []
         
         # Consume the stream response as it arrives
@@ -122,7 +125,7 @@ def scrape(query, gemini_api_key, language='en'):
             query, json_result = future.result()
             if json_result:
                 yield f"data: {json.dumps(json_result)}\n\n"
-    yield "data: {'status': 'complete'}\n\n"
+    yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
     return None
 
 def search_google_maps(url):
@@ -170,8 +173,8 @@ def search_google_maps(url):
 app = FastAPI()
 
 @app.get("/scrap/")
-async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en'):
-    return StreamingResponse(scrape(query, gemini_api_key, language), media_type="text/event-stream")
+async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1):
+    return StreamingResponse(scrape(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker), media_type="text/event-stream")
 
 @app.get("/")
 async def read_root():
