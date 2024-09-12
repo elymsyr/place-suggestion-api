@@ -17,8 +17,8 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 
 #### Get suggestion data
 
-```http
-  GET /api/scrape?gemini_api_key={gemini_api_key}&api_key={api_key}&query={query}&language={language}
+```
+  GET /api/scrape
 ```
 
 | Parameter | Type     | Description                |
