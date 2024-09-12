@@ -13,6 +13,15 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 - **Docker Deployment:** Containerized for easy deployment.
 - **AWS Integration:** Planned deployment on AWS services.
 
+## Usage
+
+**Pull and run from Docker Hub:**
+
+```
+    docker pull elymsyr/place-suggestion-api-demo
+    docker run -d -p 80:80 elymsyr/place-suggestion-api-demo
+```
+
 ## API Reference
 
 #### Get suggestion data

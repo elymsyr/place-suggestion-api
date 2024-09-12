@@ -10,6 +10,10 @@ import traceback
 from time import perf_counter
 import google.generativeai as genai
 from google.ai.generativelanguage_v1beta.types import content
+# from mangum import Mangum
+
+app = FastAPI()
+# handler = Mangum(app)
 
 def config_model():
     generation_config = {
@@ -169,8 +173,6 @@ def search_google_maps(url):
     data['image'] = image
     data['price'] = price
     return data
-
-app = FastAPI()
 
 @app.get("/scrap/")
 async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1):
