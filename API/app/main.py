@@ -103,7 +103,7 @@ def scrape(query, gemini_api_key, language='en'):
     genai.configure(api_key=gemini_api_key)
     model = config_model()
     # Use ThreadPoolExecutor for parallel fetching
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         futures = []
         
         # Consume the stream response as it arrives
