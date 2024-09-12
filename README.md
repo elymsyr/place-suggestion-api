@@ -25,7 +25,7 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 | :-------- | :------- | :------------------------- |
 | `query` | `string` | **Required** Query seach |
 | `gemini_api_key` | `string` | **Required** GEMINI API key|
-| `api_key` | `string` | Enter to use Google Maps API. (Planned Feature)|
+| `maps_api_key` | `string` | Enter to use Google Maps API. (Planned Feature)|
 | `language` | `string` | **Defalut='en'** |
 
 ## Usage/Examples

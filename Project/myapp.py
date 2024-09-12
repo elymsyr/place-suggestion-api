@@ -6,7 +6,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 import traceback
-from gemini import model
+from KEYS import GEMINI_API_KEY
+import google.generativeai as genai
+from gemini import config_model
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
@@ -63,9 +65,10 @@ def stream_response(response):
                         yield response_data
                     except: continue
 
-def scrape(query, language='en'):
+def scrape(query, gemini_api_key, language='en'):
     result = {}
-    
+    genai.configure(api_key=gemini_api_key)
+    model = config_model()
     # Use ThreadPoolExecutor for parallel fetching
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = []
@@ -87,7 +90,7 @@ def scrape(query, language='en'):
         for future in futures:
             query, json_result = future.result()
             if json_result:
-                yield f"{json_result['place_name']}: {json.dumps(json_result)}\n"
+                yield f"{json_result['place_name']}: {json.dumps(json_result)}\n\n"
 
 def search_google_maps(url):
     start = perf_counter()
@@ -113,7 +116,7 @@ def search_google_maps(url):
     
     prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
     image_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'tTVLSc')]//img")
-    image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None # if image.get_attribute('src').startswith(prefixes)
+    image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
 
     place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
     place_type = place_type_elements[0].text if place_type_elements else None
@@ -134,5 +137,5 @@ def search_google_maps(url):
     return data
 
 @app.get("/scrap/")
-async def scrape_task(query: str, language: str = 'en'):
-    return StreamingResponse(scrape(query, language), media_type="text/event-stream")
+async def scrape_task(query: str, gemini_api_key: str = GEMINI_API_KEY, maps_api_key: str = None, language: str = 'en'):
+    return StreamingResponse(scrape(query, gemini_api_key, language), media_type="text/event-stream")
