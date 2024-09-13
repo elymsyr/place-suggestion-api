@@ -5,6 +5,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+*.deb
+chrome-linux64.zip
+
 # C extensions
 *.so
 
