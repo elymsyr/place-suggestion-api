@@ -7,7 +7,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
-from chromedriver_py import binary_path
 from time import perf_counter
 import google.generativeai as genai
 from google.ai.generativelanguage_v1beta.types import content
@@ -21,7 +20,7 @@ def config_model():
         "temperature": 1,
         "top_p": 0.95,
         "top_k": 64,
-        "max_output_tokens": 500,
+        "max_output_tokens": 1000,
         "response_schema": content.Schema(
             type=content.Type.ARRAY,
             items=content.Schema(
@@ -73,9 +72,9 @@ def extract_coordinates(text):
 
     return float(latitude), float(longitude)
 
-def fetch_place_data(query, svc):
+def fetch_place_data(query):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
-    json_result = search_google_maps(svc=svc, url=url, query=query)
+    json_result = search_google_maps(url=url, query=query)
     if not json_result: json_result = {'status': 'error', 'place_name': query, 'url': url}
     return query, json_result
 
@@ -104,7 +103,6 @@ def stream_response(response):
 
 def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
     start = perf_counter()
-    svc = webdriver.ChromeService(executable_path=binary_path)
     genai.configure(api_key=gemini_api_key)
     model = config_model()
     # Use ThreadPoolExecutor for parallel fetching
@@ -120,7 +118,7 @@ def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
 
                 print("Chunk found : ", places_query)
                 
-                future = executor.submit(fetch_place_data, places_query, svc)
+                future = executor.submit(fetch_place_data, places_query)
                 futures.append(future)
 
             except Exception as e:
@@ -134,7 +132,7 @@ def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
     yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
     return None
 
-def search_google_maps(svc, url, query):
+def search_google_maps(url, query):
 
     xpaths = {
         'place_name': "//div[contains(@class, 'tTVLSc')]//h1",
@@ -153,7 +151,7 @@ def search_google_maps(svc, url, query):
     options.add_argument("--disable-images")
     options.add_argument("--disk-cache-size=0")
     options.add_argument('--disable-dev-shm-usage')    
-    driver = webdriver.Chrome(service=svc, options=options)
+    driver = webdriver.Chrome(options=options)
     print("Started to : ", query)
     driver.get(url)
     data = {}
@@ -191,7 +189,7 @@ def search_google_maps(svc, url, query):
             EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
         )
         print("Retrying : ", query)
-        return search_google_maps(svc=svc, url=a_element.get_attribute("href"), query=query)   
+        return search_google_maps(url=a_element.get_attribute("href"), query=query)   
     
     print('Scraped : ', query)
     return data
