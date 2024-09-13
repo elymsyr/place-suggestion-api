@@ -41,6 +41,8 @@ See, [API](API).
 | `language` | `string` | **Defalut = str: 'en'** |
 | `max_worker` | `string` | **Defalut = int: 1** |
 
+##### `GEMINI API KEY` can be obtained at [here](https://aistudio.google.com/app/apikey).
+
 ## Usage/Examples
 
 **Results with the Query `I need some quiet places in Amsterdam to spend time` :**
