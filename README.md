@@ -5,12 +5,12 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 ## Features
 
 - **AI-Powered Recommendations:** Suggest places based on user input.
+- **Docker Deployment:** Containerized for easy deployment.
 - **Detailed Place Information:** Includes scraped names, prices, starts, place features, locations, and multimedia etc.
 
 ## Planned Features
 
 - **Google Maps API Implementation**: Google Maps API will be optional for fast and more accurate results.
-- **Docker Deployment:** Containerized for easy deployment.
 - **AWS Integration:** Planned deployment on AWS services.
 
 ## Usage
