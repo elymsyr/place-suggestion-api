@@ -75,7 +75,9 @@ def extract_coordinates(text):
 def fetch_place_data(query):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
     json_result = search_google_maps(url=url, query=query)
-    if not json_result: json_result = {'status': 'error', 'place_name': query, 'url': url}
+    if not json_result: 
+        json_result = {'status': 'error', 'place_name': query, 'url': url}
+        print('Error : ', query)
     return query, json_result
 
 def stream_response(response):
@@ -132,7 +134,7 @@ def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
     yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
     return None
 
-def search_google_maps(url, query):
+def search_google_maps(url, query, wait_time: int = 5):
 
     xpaths = {
         'place_name': "//div[contains(@class, 'tTVLSc')]//h1",
@@ -156,9 +158,19 @@ def search_google_maps(url, query):
     driver.get(url)
     data = {}
 
+    try:
+        WebDriverWait(driver, wait_time*3).until((By.XPATH, xpaths['place_name']))
+    except:
+        None
+
     # Extract place name
     place_name_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'tTVLSc')]//h1")
     place_name = place_name_elements[0].text if place_name_elements else None
+    
+    try:
+        WebDriverWait(driver, wait_time*3).until((By.XPATH, xpaths['image_elements']))
+    except:
+        None    
     
     prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
     image_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'tTVLSc')]//img")
@@ -180,17 +192,19 @@ def search_google_maps(url, query):
     data['price'] = price
 
     try:
-        WebDriverWait(driver, 2).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
+        WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
         data['url'] = driver.current_url
         data['coordinate'] = extract_coordinates(data['url'])
         print("Page loaded successfully : ", query)
     except:
-        a_element = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
-        )
-        print("Retrying : ", query)
-        return search_google_maps(url=a_element.get_attribute("href"), query=query)   
-    
+        try:
+            a_element = WebDriverWait(driver, wait_time*2).until(
+                EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
+            )
+            print("Retrying : ", query)
+            return search_google_maps(url=a_element.get_attribute("href"), query=query)
+        except:
+            None
     print('Scraped : ', query)
     return data
 
