@@ -11,7 +11,7 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 ## Planned Features
 
 - **Google Maps API Implementation**: Google Maps API will be optional for fast and more accurate results.
-- **AWS Integration:** Planned deployment on AWS services.
+- **Cloud Deployment:** Planned deployment on services such as AWS. (This feature has been postponed to a later date due to financial reasons.)
 
 ## Usage
 
@@ -64,6 +64,7 @@ Vondelpark:
         "coordinate": [52.3579946, 4.8686484],
         ...
     }
+    ...
 ```
 ## Optimizations
 
