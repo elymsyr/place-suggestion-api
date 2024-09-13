@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-import json, re
+import json, re, traceback
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
-import traceback
+from chromedriver_py import binary_path
 from time import perf_counter
 import google.generativeai as genai
 from google.ai.generativelanguage_v1beta.types import content
@@ -72,11 +73,10 @@ def extract_coordinates(text):
 
     return float(latitude), float(longitude)
 
-def fetch_place_data(query, language):
+def fetch_place_data(query, svc):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
-    json_result = search_google_maps(url=url)
-    if json_result:
-        json_result['coordinate'] = extract_coordinates(json_result['url'])
+    json_result = search_google_maps(svc=svc, url=url, query=query)
+    if not json_result: json_result = {'status': 'error', 'place_name': query, 'url': url}
     return query, json_result
 
 def stream_response(response):
@@ -104,7 +104,7 @@ def stream_response(response):
 
 def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
     start = perf_counter()
-    assert isinstance(max_worker, int)
+    svc = webdriver.ChromeService(executable_path=binary_path)
     genai.configure(api_key=gemini_api_key)
     model = config_model()
     # Use ThreadPoolExecutor for parallel fetching
@@ -118,7 +118,9 @@ def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
                 # Extract the places query from the chunk
                 places_query = f"{chunk['place_name']}, {chunk['street']}, {chunk['city']}, {chunk['country']}"
 
-                future = executor.submit(fetch_place_data, places_query, language)
+                print("Chunk found : ", places_query)
+                
+                future = executor.submit(fetch_place_data, places_query, svc)
                 futures.append(future)
 
             except Exception as e:
@@ -132,22 +134,29 @@ def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
     yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
     return None
 
-def search_google_maps(url):
+def search_google_maps(svc, url, query):
+
+    xpaths = {
+        'place_name': "//div[contains(@class, 'tTVLSc')]//h1",
+        'image_elements': "//div[contains(@class, 'tTVLSc')]//img",
+        'place_type': "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]",
+        'place_type_back': "//div[contains(@class, 'skqShb')]",
+        'price_elements': "//span[contains(@aria-label, 'Price')]",
+        'if_result_url': "//div/a[contains(@class, 'hfpxzc')]"
+    }    
+    
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
+    # chrome_prefs = {"profile.managed_default_content_settings.images": 2}
+    # options.add_experimental_option("prefs", chrome_prefs)
+    options.add_argument("--disable-images")
+    options.add_argument("--disk-cache-size=0")
     options.add_argument('--disable-dev-shm-usage')    
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(service=svc, options=options)
+    print("Started to : ", query)
     driver.get(url)
     data = {}
-    try:
-        # WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'tTVLSc')]")))
-        WebDriverWait(driver, 30).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
-        data['url'] = driver.current_url
-        print("Page loaded successfully.")
-    except:
-        print("Timed out waiting for page to load.")
-        return {}
 
     # Extract place name
     place_name_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'tTVLSc')]//h1")
@@ -167,11 +176,24 @@ def search_google_maps(url):
     price_elements = driver.find_elements(By.XPATH, "//span[contains(@aria-label, 'Price')]")
     price = price_elements[0].text if price_elements else None
 
-
     data['place_name'] = place_name
     data['place_type'] = place_type
     data['image'] = image
     data['price'] = price
+
+    try:
+        WebDriverWait(driver, 2).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
+        data['url'] = driver.current_url
+        data['coordinate'] = extract_coordinates(data['url'])
+        print("Page loaded successfully : ", query)
+    except:
+        a_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
+        )
+        print("Retrying : ", query)
+        return search_google_maps(svc=svc, url=a_element.get_attribute("href"), query=query)   
+    
+    print('Scraped : ', query)
     return data
 
 @app.get("/scrap/")
