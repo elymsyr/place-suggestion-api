@@ -1,0 +1,7 @@
+docker pull elymsyr/place-suggestion-api-demo:latest
+
+docker tag docker.io/elymsyr/place-suggestion-api-demo:latest europe-central2-docker.pkg.dev/locamark-and-tests/place-suggestion-api-demo/place-suggestion-api-demo-image:latest
+
+docker push europe-central2-docker.pkg.dev/locamark-and-tests/place-suggestion-api-demo/place-suggestion-api-demo-image:latest
+
+gcloud run deploy --image=europe-central2-docker.pkg.dev/locamark-and-tests/place-suggestion-api-demo/place-suggestion-api-demo-image:latest

@@ -164,7 +164,7 @@ def search_google_maps(url, query, wait_time: int = 5):
         None
 
     # Extract place name
-    place_name_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'tTVLSc')]//h1")
+    place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
     place_name = place_name_elements[0].text if place_name_elements else None
     
     try:
@@ -173,7 +173,7 @@ def search_google_maps(url, query, wait_time: int = 5):
         None    
     
     prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
-    image_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'tTVLSc')]//img")
+    image_elements = driver.find_elements(By.XPATH, xpaths['image_elements'])
     image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
 
     place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
