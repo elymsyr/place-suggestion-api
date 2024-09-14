@@ -11,7 +11,7 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 ## Planned Features
 
 - **Google Maps API Implementation**: Google Maps API will be optional for fast and more accurate results.
-- **Cloud Deployment:** Planned deployment on services such as AWS. (This feature has been postponed to a later date due to financial reasons.)
+- **Cloud Deployment:** Planned deployment on services such as AWS. (The project was deployed on AWS ECS and Lambda but this feature has been postponed to a later date due to financial reasons.)
 
 ## Usage
 
@@ -69,6 +69,7 @@ Vondelpark:
 ## Optimizations
 
 **Fast response with asynchronous processing :** API scraps data as the Gemini produces response. Also, data scraping is proccessed asynchronously.
+**WebDriver Pool Tested :** Creating a pool for web drivers in order to avoid creating a new one for each dscraping process was tested but the results has shown that creating a new one is faster and cost efficient.
 
 ## Running Tests
 
