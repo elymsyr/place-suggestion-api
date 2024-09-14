@@ -106,7 +106,7 @@ def stream_response(response, start):
                     try:
                         response_data = json.loads(buffer[start_index:end_index + 1])
                         buffer = buffer[:start_index] + buffer[end_index + 1:]
-                        response['timer'] = perf_counter() - start
+                        response_data['timer'] = perf_counter() - start
                         yield response_data
                     except: continue
 
@@ -114,14 +114,14 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
     start = perf_counter()
     genai.configure(api_key=gemini_api_key)
     model = config_model()
-    
+
     with ThreadPoolExecutor(max_workers=int(max_worker)) as executor:
         futures = []
-        start = perf_counter()
-        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True), start):
+        
+        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True), start=start):
             try:
                 places_query = f"{chunk['place_name']}, {chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}"
-                print("Chunk found : ", places_query, " in ", chunk['timer'], " s")            
+                print(f"Chunk found in {chunk['timer']} s : ", places_query)            
 
                 future = executor.submit(fetch_place_data, places_query)
                 futures.append(future)
