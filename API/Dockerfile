@@ -14,7 +14,7 @@ RUN apt-get update -qq -y && \
     unzip chrome-linux64.zip && \
     mv chrome-linux64 /usr/bin/ && \
     apt-get install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb && \
-    rm -rf chrome-linux64.zip google-chrome-stable_current_amd64.deb /var/lib/apt/lists/*
+    rm -rf chrome-linux64.zip google-chrome-stable_current_amd64.deb
 
 # Copy requirements and install Python dependencies
 COPY ./requirements.txt /code/requirements.txt
