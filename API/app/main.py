@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 import json, re, traceback
 from selenium import webdriver
+from contextlib import contextmanager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
@@ -103,21 +104,17 @@ def stream_response(response):
                         yield response_data
                     except: continue
 
-def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
+def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
     start = perf_counter()
     genai.configure(api_key=gemini_api_key)
     model = config_model()
-    # Use ThreadPoolExecutor for parallel fetching
+    
     with ThreadPoolExecutor(max_workers=int(max_worker)) as executor:
         futures = []
         
-        # Consume the stream response as it arrives
         for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True)):
-                # Process the chunk (convert it to JSON)
             try:
-                # Extract the places query from the chunk
                 places_query = f"{chunk['place_name']}, {chunk['street']}, {chunk['city']}, {chunk['country']}"
-
                 print("Chunk found : ", places_query)
                 
                 future = executor.submit(fetch_place_data, places_query)
@@ -126,16 +123,15 @@ def scrape(query: str, gemini_api_key: str, max_worker: int, language: str):
             except Exception as e:
                 print(e, traceback.format_exc())
 
-        # Collect results from futures as they complete
         for future in futures:
             query, json_result = future.result()
             if json_result:
                 yield f"data: {json.dumps(json_result)}\n\n"
+    print(f"End : {perf_counter()-start}")
     yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
     return None
 
 def search_google_maps(url, query, wait_time: int = 5):
-
     xpaths = {
         'place_name': "//div[contains(@class, 'tTVLSc')]//h1",
         'image_elements': "//div[contains(@class, 'tTVLSc')]//img",
@@ -144,73 +140,86 @@ def search_google_maps(url, query, wait_time: int = 5):
         'price_elements': "//span[contains(@aria-label, 'Price')]",
         'if_result_url': "//div/a[contains(@class, 'hfpxzc')]"
     }    
-    
+
+    with get_driver() as driver:
+        print("Started to : ", query)
+        driver.get(url)
+        data = {}
+
+        try:
+            WebDriverWait(driver, wait_time*3).until(EC.presence_of_element_located((By.XPATH, xpaths['place_name'])))
+            place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
+            place_name = place_name_elements[0].text if place_name_elements else None    
+        except:
+            return None
+
+        try:
+            WebDriverWait(driver, wait_time*3).until(EC.presence_of_element_located((By.XPATH, xpaths['image_elements'])))
+            prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
+            image_elements = driver.find_elements(By.XPATH, xpaths['image_elements'])
+            image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
+        except:
+            return None
+
+        place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
+        place_type = place_type_elements[0].text if place_type_elements else None
+
+        if place_type is None or place_type == '':
+            place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]")
+            place_type = place_type_elements[0].text if place_type_elements else None
+
+        price_elements = driver.find_elements(By.XPATH, "//span[contains(@aria-label, 'Price')]")
+        price = price_elements[0].text if price_elements else None
+
+        data['place_name'] = place_name
+        data['place_type'] = place_type
+        data['image'] = image
+        data['price'] = price
+
+        try:
+            WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
+            data['url'] = driver.current_url
+            data['coordinate'] = extract_coordinates(data['url'])
+            print("Page loaded successfully : ", query)
+        except:
+            try:
+                a_element = WebDriverWait(driver, wait_time*2).until(
+                    EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
+                )
+                print("Retrying : ", query)
+                return search_google_maps(url=a_element.get_attribute("href"), query=query)
+            except:
+                return None
+        print('Scraped : ', query)
+        return data
+
+@contextmanager
+def get_driver():
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    # chrome_prefs = {"profile.managed_default_content_settings.images": 2}
-    # options.add_experimental_option("prefs", chrome_prefs)
     options.add_argument("--disable-images")
     options.add_argument("--disk-cache-size=0")
-    options.add_argument('--disable-dev-shm-usage')    
+    options.add_argument('--disable-dev-shm-usage')
+    options.add_argument('–disable-background-networking')
+    options.add_argument('–disable-checker-imaging')
+    options.add_argument('–disable-component-extensions-with-background-pages')
+    options.add_argument('–disable-datasaver-prompt')
+    options.add_argument('–disable-dev-shm-usage')
+    options.add_argument('–disable-domain-reliability')
+    options.add_argument('–disable-logging')
+    options.add_argument('–disable-notifications')
+    options.add_argument('–disable-renderer-backgrounding')
+    
     driver = webdriver.Chrome(options=options)
-    print("Started to : ", query)
-    driver.get(url)
-    data = {}
-
     try:
-        WebDriverWait(driver, wait_time*3).until((By.XPATH, xpaths['place_name']))
-    except:
-        None
-
-    # Extract place name
-    place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
-    place_name = place_name_elements[0].text if place_name_elements else None
-    
-    try:
-        WebDriverWait(driver, wait_time*3).until((By.XPATH, xpaths['image_elements']))
-    except:
-        None    
-    
-    prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
-    image_elements = driver.find_elements(By.XPATH, xpaths['image_elements'])
-    image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
-
-    place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
-    place_type = place_type_elements[0].text if place_type_elements else None
-
-    if place_type is None or place_type == '':
-        place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]")
-        place_type = place_type_elements[0].text if place_type_elements else None
-
-    price_elements = driver.find_elements(By.XPATH, "//span[contains(@aria-label, 'Price')]")
-    price = price_elements[0].text if price_elements else None
-
-    data['place_name'] = place_name
-    data['place_type'] = place_type
-    data['image'] = image
-    data['price'] = price
-
-    try:
-        WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
-        data['url'] = driver.current_url
-        data['coordinate'] = extract_coordinates(data['url'])
-        print("Page loaded successfully : ", query)
-    except:
-        try:
-            a_element = WebDriverWait(driver, wait_time*2).until(
-                EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
-            )
-            print("Retrying : ", query)
-            return search_google_maps(url=a_element.get_attribute("href"), query=query)
-        except:
-            None
-    print('Scraped : ', query)
-    return data
+        yield driver
+    finally:
+        driver.quit()
 
 @app.get("/scrap/")
 async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1):
-    return StreamingResponse(scrape(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker), media_type="text/event-stream")
+    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker), media_type="text/event-stream")
 
 @app.get("/")
 async def read_root():

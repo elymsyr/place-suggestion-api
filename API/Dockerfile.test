@@ -1,0 +1,41 @@
+FROM python:3.10-slim AS builder
+
+WORKDIR /code
+
+# Copy Chrome files first
+COPY ./google-chrome-stable_current_amd64.deb /code/google-chrome-stable_current_amd64.deb
+COPY ./chrome-linux64.zip /code/chrome-linux64.zip
+COPY ./requirements.txt /code/requirements.txt
+
+# Install dependencies, Chrome, and clean up
+RUN apt-get update -qq -y && \
+    apt-get install -y --no-install-recommends unzip && \
+    apt-get install -y --no-install-recommends libnss3 libxss1 libappindicator3-1 libasound2 && \
+    unzip chrome-linux64.zip && \
+    mv chrome-linux64 /usr/bin/ && \
+    apt-get purge -y --auto-remove unzip
+
+# Copy application code
+COPY ./app /code/app/
+
+# Final image
+FROM python:3.10-slim
+
+WORKDIR /code
+
+ENV HOST=0.0.0.0
+
+# Copy only necessary files from the builder
+COPY --from=builder /usr/bin/chrome-linux64 /usr/bin/chrome-linux64
+COPY --from=builder /code /code
+
+RUN apt-get install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb && \
+    rm -rf chrome-linux64.zip google-chrome-stable_current_amd64.deb
+
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+
+RUN google-chrome --version
+
+EXPOSE 8080
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
