@@ -21,7 +21,10 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
     docker pull elymsyr/place-suggestion-api-demo
     docker run -d -p 8000:8000 elymsyr/place-suggestion-api-demo
 ```
-Open `http://0.0.0.0:8000/scrap/?query=I%20need%20some%20quiet%20places%20to%20spend%20time%20in%20Amsterdam&gemini_api_key={YOUR_API_KEY}&language=en&max_worker={MAX_WORKER_NUMBER}` to test container. Estimated response time is ~15 seconds.
+Test container:
+```
+http://0.0.0.0:8000/scrap/?query=I%20need%20some%20quiet%20places%20to%20spend%20time%20in%20Amsterdam&gemini_api_key={YOUR_API_KEY}&language=en&max_worker={MAX_WORKER_NUMBER}
+```
 
 ## API Reference
 
@@ -69,6 +72,7 @@ Vondelpark:
 ## Optimizations
 
 **Fast response with asynchronous processing :** API scraps data as the Gemini produces response. Also, data scraping is proccessed asynchronously.
+
 **WebDriver Pool Tested :** Creating a pool for web drivers in order to avoid creating a new one for each dscraping process was tested but the results has shown that creating a new one is faster and cost efficient.
 
 ## Running Tests
