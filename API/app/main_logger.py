@@ -80,10 +80,6 @@ def extract_coordinates(text):
 def fetch_place_data(query):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
     json_result = search_google_maps(url=url, query=query)
-    if not json_result or isinstance(json_result, str): 
-        if not json_result: 
-            json_result = {'status': 'error', 'place_name': query, 'url': url}
-        else: json_result = {'status': json_result, 'place_name': query, 'url': url}
     return query, json_result
 
 def stream_response(response, start):
@@ -134,7 +130,7 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
             if json_result:
                 yield f"data: {json.dumps(json_result)}\n\n"
     print(f"End : {perf_counter()-start}")
-    yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
+    yield f"data: {{'status': 'end_process','time': {perf_counter()-start}}}"
     return None
 
 def search_google_maps(url, query, wait_time: int = 5, second_time = False):
@@ -149,10 +145,10 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
     }    
 
     with get_driver() as (driver, creation_time):
-        print("Started to : ", query)
+        print("Started to : ", query, " ", url)
         driver.get(url)
-        data = {}
-        print(url)
+        data = {'status': 1}
+        errors = []
         start = perf_counter()
         timers = f"\n{query}\nDriver Created : {creation_time}"
         try:
@@ -161,7 +157,7 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
             place_name = place_name_elements[0].text if place_name_elements else None    
             data['place_name'] = place_name
         except:
-            if second_time: return f"No place name found : {query}"
+            if second_time: errors.append(f"No place name found : {query}"); data['status'] = 0
         timers += f"\nTimer place_name {second_time}) : {perf_counter() - start}" ; start = perf_counter()
 
         try:
@@ -171,7 +167,7 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
             image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
             data['image'] = image
         except:
-            if second_time: return f"No image found : {query}"
+            if second_time: errors.append(f"No image found : {query}"); data['status'] = 0
         timers += f"\nTimer image_elements ({second_time}) : {perf_counter() - start}" ; start = perf_counter()
 
         patrial_matches_elements = driver.find_elements(By.XPATH, xpaths['patrial_matches'])
@@ -197,7 +193,7 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
             WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
             data['url'] = driver.current_url
             data['coordinate'] = extract_coordinates(data['url'])
-            print("Page loaded successfully : ", query, url)
+            print("Url loaded successfully : ", query, url)
         except:
             try:
                 a_element = WebDriverWait(driver, wait_time*2).until(
@@ -206,8 +202,8 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
                 print("Retrying : ", query)
                 if not second_time: return search_google_maps(url=a_element.get_attribute("href"), query=query, second_time=True)
             except:
-                return f"Error found : {query}"
-        # print('Scraped : ', query)
+                timers += f"\nTimer rest elements ({second_time}) : {perf_counter() - start}"
+                start = perf_counter()
         timers += f"\nTimer Scraped ({second_time}) : {perf_counter() - start}\n"
         print(timers)
         return data
