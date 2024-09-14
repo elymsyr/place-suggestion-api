@@ -1,5 +1,3 @@
-### See Project/main_logger.py for logging.
-
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 import json, re, traceback
@@ -75,20 +73,16 @@ def extract_coordinates(text):
         latitude, longitude = match_2.groups()
     else:
         # Return None if no coordinates found
-        return None
+        return None, None
 
     return float(latitude), float(longitude)
 
-def fetch_place_data(query):
+def fetch_place_data(query, start):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
-    json_result = search_google_maps(url=url, query=query)
-    if not json_result or isinstance(json_result, str): 
-        if not json_result: 
-            json_result = {'status': 'error', 'place_name': query, 'url': url}
-        else: json_result = {'status': json_result, 'place_name': query, 'url': url}
+    json_result = search_google_maps(url=url, query=query, start=start)
     return query, json_result
 
-def stream_response(response):
+def stream_response(response, start):
     buffer: str = ""
     collecting = False
     for chunk in response:
@@ -108,6 +102,7 @@ def stream_response(response):
                     try:
                         response_data = json.loads(buffer[start_index:end_index + 1])
                         buffer = buffer[:start_index] + buffer[end_index + 1:]
+                        response_data['timer'] = perf_counter() - start
                         yield response_data
                     except: continue
 
@@ -115,16 +110,16 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
     start = perf_counter()
     genai.configure(api_key=gemini_api_key)
     model = config_model()
-    
+
     with ThreadPoolExecutor(max_workers=int(max_worker)) as executor:
         futures = []
         
-        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True)):
+        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True), start=start):
             try:
                 places_query = f"{chunk['place_name']}, {chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}"
-                print("Chunk found : ", places_query)            
+                print(f"Chunk found in {chunk['timer']} s : ", places_query)            
 
-                future = executor.submit(fetch_place_data, places_query)
+                future = executor.submit(fetch_place_data, places_query, start)
                 futures.append(future)
 
             except Exception as e:
@@ -135,12 +130,21 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
             if json_result:
                 yield f"data: {json.dumps(json_result)}\n\n"
     print(f"End : {perf_counter()-start}")
-    yield f"data: {{'status': 'complete','time': {perf_counter()-start}}}"
+    yield f"data: {{'status': 'end_process','time': {perf_counter()-start}}}"
     return None
 
-def search_google_maps(url, query, wait_time: int = 5, second_time = False):
+def search_google_maps(url, query, start, wait_time: int = 5, max_instance: int = 2):
+    with get_driver() as (driver, creation_time):
+        print(f"Started at {perf_counter() - start} : ", query, "\n  ", url)
+        driver.get(url)
+        data, new_url = scrap_data(url, query, start, wait_time, driver, creation_time)
+        if new_url: data, new_url = scrap_data(new_url, query, start, wait_time, driver, creation_time)
+        return data
+
+def scrap_data(url, query, start, wait_time, driver, creation_time):
     xpaths = {
         'place_name': "//div[contains(@class, 'tTVLSc')]//h1",
+        'place_name_2': "//div[contains(@class, 'lMbq3e')]//h1",
         'image_elements': "//div[contains(@class, 'tTVLSc')]//img",
         'place_type': "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]",
         'place_type_back': "//div[contains(@class, 'skqShb')]",
@@ -148,67 +152,74 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
         'if_result_url': "//div/a[contains(@class, 'hfpxzc')]",
         'patrial_matches': "//div[contains(@class, 'Bt0TOd')]"
     }    
+    data = {'status': 1}
+    timers = f"\n{query}\nDriver Created : {perf_counter() - start} ({creation_time:.2f})"
+    try:
+        WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['place_name'])))
+        place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
+        place_name = place_name_elements[0].text if place_name_elements else None    
+        data['place_name'] = place_name
+    except: data['status'] = 0
 
-    with get_driver() as driver:
-        print("Started to : ", query)
-        driver.get(url)
-        data = {}
-        print(url)
+    timers += f"\nTimer - place_name : {perf_counter() - start}"
 
-        try:
-            WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['place_name'])))
-            place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
-            place_name = place_name_elements[0].text if place_name_elements else None    
-            data['place_name'] = place_name
-        except:
-            if second_time: return f"No place name found : {query}"
+    try:
+        WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['image_elements'])))
+        prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
+        image_elements = driver.find_elements(By.XPATH, xpaths['image_elements'])
+        image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
+        data['image'] = image
+    except: data['status'] = 0
+    timers += f"\nTimer - image_elements : {perf_counter() - start}"
 
-        try:
-            WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['image_elements'])))
-            prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
-            image_elements = driver.find_elements(By.XPATH, xpaths['image_elements'])
-            image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
-            data['image'] = image
-        except:
-            if second_time: return f"No image found : {query}"
+    patrial_matches_elements = driver.find_elements(By.XPATH, xpaths['patrial_matches'])
+    if patrial_matches_elements:
+        patrial_matches = [element.text for element in patrial_matches_elements][0]
+        if patrial_matches and 'partial match'.strip() in patrial_matches.lower().strip(): return f"Partial matches found : {query}"
 
+    place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
+    place_type = place_type_elements[0].text if place_type_elements else None
+    data['place_type'] = place_type
 
-        patrial_matches_elements = driver.find_elements(By.XPATH, xpaths['patrial_matches'])
-        if patrial_matches_elements:
-            patrial_matches = [element.text for element in patrial_matches_elements][0]
-            if patrial_matches and 'partial match'.strip() in patrial_matches.lower().strip(): return f"Partial matches found : {query}"
-
-        place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
+    if place_type is None or place_type == '':
+        place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]")
         place_type = place_type_elements[0].text if place_type_elements else None
-        data['place_type'] = place_type
 
-        if place_type is None or place_type == '':
-            place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]")
-            place_type = place_type_elements[0].text if place_type_elements else None
+    price_elements = driver.find_elements(By.XPATH, "//span[contains(@aria-label, 'Price')]")
+    price = price_elements[0].text if price_elements else None
+    data['price'] = price
 
-        price_elements = driver.find_elements(By.XPATH, "//span[contains(@aria-label, 'Price')]")
-        price = price_elements[0].text if price_elements else None
-        data['price'] = price
+    timers += f"\nTimer - other elements : {perf_counter() - start}"
 
+    try:
+        WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
+        data['url'] = driver.current_url
+        data['coordinate'] = extract_coordinates(data['url'])
+        print(f"Url loaded successfully : {perf_counter() - start} ", query, url)
+    except:
+        data['status'] = 0
+
+    timers += f"\nTimer - Scraped : {perf_counter() - start}"
+    timers += f"\n{data['status']=}\n"
+    print(timers)
+    
+    if data['status'] == 0:
+        
+        data['response'] = query
+        if 'url' not in data.keys(): data['url'] = url
+        
         try:
-            WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
-            data['url'] = driver.current_url
-            data['coordinate'] = extract_coordinates(data['url'])
-            print("Page loaded successfully : ", query, url)
-        except:
-            try:
-                a_element = WebDriverWait(driver, wait_time*2).until(
-                    EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
-                )
-                print("Retrying : ", query)
-                if not second_time: return search_google_maps(url=a_element.get_attribute("href"), query=query, second_time=True)
-            except:
-                return f"Error found : {query}"
-        print('Scraped : ', query)
-        return data
+            a_element = WebDriverWait(driver, wait_time).until(
+                EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
+            )
+            return data, a_element.get_attribute("href")
+        except: pass
+
+    return data, []
 
 @contextmanager
 def get_driver():
+    start = perf_counter()
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
@@ -227,7 +238,7 @@ def get_driver():
     
     driver = webdriver.Chrome(options=options)
     try:
-        yield driver
+        yield driver, perf_counter() - start
     finally:
         driver.quit()
 
