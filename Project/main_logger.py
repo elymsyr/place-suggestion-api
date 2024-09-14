@@ -1,5 +1,3 @@
-### See Project/main_logger.py for logging.
-
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 import json, re, traceback
@@ -88,7 +86,7 @@ def fetch_place_data(query):
         else: json_result = {'status': json_result, 'place_name': query, 'url': url}
     return query, json_result
 
-def stream_response(response):
+def stream_response(response, start):
     buffer: str = ""
     collecting = False
     for chunk in response:
@@ -108,6 +106,7 @@ def stream_response(response):
                     try:
                         response_data = json.loads(buffer[start_index:end_index + 1])
                         buffer = buffer[:start_index] + buffer[end_index + 1:]
+                        response['timer'] = perf_counter() - start
                         yield response_data
                     except: continue
 
@@ -118,11 +117,11 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
     
     with ThreadPoolExecutor(max_workers=int(max_worker)) as executor:
         futures = []
-        
-        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True)):
+        start = perf_counter()
+        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True), start):
             try:
                 places_query = f"{chunk['place_name']}, {chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}"
-                print("Chunk found : ", places_query)            
+                print("Chunk found : ", places_query, " in ", chunk['timer'], " s")            
 
                 future = executor.submit(fetch_place_data, places_query)
                 futures.append(future)
@@ -149,12 +148,13 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
         'patrial_matches': "//div[contains(@class, 'Bt0TOd')]"
     }    
 
-    with get_driver() as driver:
+    with get_driver() as (driver, creation_time):
         print("Started to : ", query)
         driver.get(url)
         data = {}
         print(url)
-
+        start = perf_counter()
+        timers = f"\n{query}\nDriver Created : {creation_time}"
         try:
             WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['place_name'])))
             place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
@@ -162,6 +162,7 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
             data['place_name'] = place_name
         except:
             if second_time: return f"No place name found : {query}"
+        timers += f"\nTimer place_name {second_time}) : {perf_counter() - start}" ; start = perf_counter()
 
         try:
             WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['image_elements'])))
@@ -171,7 +172,7 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
             data['image'] = image
         except:
             if second_time: return f"No image found : {query}"
-
+        timers += f"\nTimer image_elements ({second_time}) : {perf_counter() - start}" ; start = perf_counter()
 
         patrial_matches_elements = driver.find_elements(By.XPATH, xpaths['patrial_matches'])
         if patrial_matches_elements:
@@ -190,6 +191,8 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
         price = price_elements[0].text if price_elements else None
         data['price'] = price
 
+        timers += f"\nTimer rest elements ({second_time}) : {perf_counter() - start}" ; start = perf_counter()
+
         try:
             WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
             data['url'] = driver.current_url
@@ -204,11 +207,14 @@ def search_google_maps(url, query, wait_time: int = 5, second_time = False):
                 if not second_time: return search_google_maps(url=a_element.get_attribute("href"), query=query, second_time=True)
             except:
                 return f"Error found : {query}"
-        print('Scraped : ', query)
+        # print('Scraped : ', query)
+        timers += f"\nTimer Scraped ({second_time}) : {perf_counter() - start}\n"
+        print(timers)
         return data
 
 @contextmanager
 def get_driver():
+    start = perf_counter()
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
@@ -227,7 +233,7 @@ def get_driver():
     
     driver = webdriver.Chrome(options=options)
     try:
-        yield driver
+        yield driver, perf_counter() - start
     finally:
         driver.quit()
 

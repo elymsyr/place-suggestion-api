@@ -18,8 +18,8 @@ This project aims to develop a RESTful API that uses Gemini AI to suggest places
 **Pull and run from Docker Hub:**
 
 ```
-    docker pull elymsyr/place-suggestion-api-demo
-    docker run -d -p 8000:8000 elymsyr/place-suggestion-api-demo
+    docker pull elymsyr/place-suggestion-api (:latest/:timelogger)
+    docker run -d -p 8000:8000 elymsyr/place-suggestion-api
 ```
 Test container:
 ```
