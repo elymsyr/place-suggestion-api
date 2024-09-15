@@ -16,6 +16,14 @@ from google.ai.generativelanguage_v1beta.types import content
 app = FastAPI()
 # handler = Mangum(app)
 
+import googlemaps
+
+# Function to search for places with location restriction
+def search_place_with_location(place_name, location, gmaps):
+    """Search for a place with a location restriction."""
+    results = gmaps.places(query=place_name, location=location)
+    return results
+
 def config_model():
     generation_config = {
         "temperature": 1,
@@ -77,9 +85,9 @@ def extract_coordinates(text):
 
     return float(latitude), float(longitude)
 
-def fetch_place_data(query, start, wait_time):
+def fetch_place_data(query, start, wait_time, gmaps = None, chunk=None):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
-    json_result = search_google_maps(url=url, query=query, start=start, wait_time=wait_time)
+    json_result = search_google_maps(url=url, query=query, start=start, wait_time=wait_time, gmaps= gmaps if gmaps else None, chunk= chunk if chunk else None)
     return query, json_result
 
 def stream_response(response, start):
@@ -106,7 +114,7 @@ def stream_response(response, start):
                         yield response_data
                     except: continue
 
-def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_time: int):
+def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_time: int, gmaps = None):
     start = perf_counter()
     if max_worker > 10: max_worker = 10 ; print('Max worker is set to 10.')
     if max_worker < 1: max_worker = 1 ; print('Max worker is set to 1.')
@@ -121,7 +129,7 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_
                 places_query = f"{chunk['place_name']}, {chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}"
                 print(f"Chunk found in {chunk['timer']} s : ", places_query)            
 
-                future = executor.submit(fetch_place_data, places_query, start, wait_time)
+                future = executor.submit(fetch_place_data, places_query, start, wait_time, gmaps if gmaps else None, chunk)
                 futures.append(future)
 
             except Exception as e:
@@ -135,7 +143,9 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_
     yield f"data: {{'status': 'end_process','time': {perf_counter()-start}}}"
     return None
 
-def search_google_maps(url, query, start, wait_time: int = 5):
+def search_google_maps(url, query, start, gmaps, chunk, wait_time: int = 5):
+    if gmaps and chunk:
+        return search_place_with_location(f"{chunk['place_name']}", f"{chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}", gmaps)
     with get_driver() as (driver, creation_time):
         print(f"Started at {perf_counter() - start} : ", query, "\n  ", url)
         driver.get(url)
@@ -249,7 +259,9 @@ def get_driver():
 
 @app.get("/scrap/")
 async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1, wait_time: int = 4):
-    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time), media_type="text/event-stream")
+    gmaps = None
+    if maps_api_key: gmaps = googlemaps.Client(key=maps_api_key)
+    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time, gmaps=gmaps), media_type="text/event-stream")
 
 @app.get("/")
 async def read_root():
