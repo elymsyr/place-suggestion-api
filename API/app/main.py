@@ -149,7 +149,9 @@ def search_google_maps(url, query, start, gmaps, chunk, wait_time: int = 5):
         print(f"Started at {perf_counter() - start} : ", query, "\n  ", url)
         driver.get(url)
         data, new_url = scrap_data(url, query, start, wait_time, driver, creation_time)
-        if new_url: data, new_url = scrap_data(new_url, query, start, wait_time, driver, creation_time)
+        if new_url: 
+            driver.get(new_url)
+            data, new_url = scrap_data(new_url, query, start, wait_time, driver, creation_time)
         return data
 
 def scrap_data(url, query, start, wait_time, driver, creation_time):
