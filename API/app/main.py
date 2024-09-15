@@ -108,6 +108,8 @@ def stream_response(response, start):
 
 def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_time: int):
     start = perf_counter()
+    if max_worker > 10: max_worker = 10 ; print('Max worker is set to 10.')
+    if max_worker < 1: max_worker = 1 ; print('Max worker is set to 1.')
     genai.configure(api_key=gemini_api_key)
     model = config_model()
 
@@ -223,6 +225,8 @@ def get_driver():
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
+    options.add_argument("--disable-gpu")
+    options.add_argument("window-size=1024,768")
     options.add_argument("--disable-images")
     options.add_argument("--disk-cache-size=0")
     options.add_argument('--disable-dev-shm-usage')
