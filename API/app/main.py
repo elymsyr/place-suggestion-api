@@ -214,7 +214,8 @@ def scrap_data(url, query, start, wait_time, driver, creation_time):
             a_element = WebDriverWait(driver, wait_time).until(
                 EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
             )
-            return data, a_element.get_attribute("href")
+            new_url = a_element.get_attribute("href")
+            return data, new_url if new_url and isinstance(new_url, str) and new_url.startswith('https://www.google.com/maps') else []
         except: pass
 
     return data, []
