@@ -10,15 +10,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 import google.generativeai as genai
+from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
 from google.ai.generativelanguage_v1beta.types import content
+import googlemaps
 # from mangum import Mangum
 
 app = FastAPI()
 # handler = Mangum(app)
 
-import googlemaps
-
-# Function to search for places with location restriction
 def search_place_with_location(place_name, location, gmaps):
     """Search for a place with a location restriction."""
     results = gmaps.places(query=place_name, location=location)
@@ -258,10 +257,17 @@ def get_driver():
         driver.quit()
 
 @app.get("/scrap/")
-async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1, wait_time: int = 4):
-    gmaps = None
-    if maps_api_key: gmaps = googlemaps.Client(key=maps_api_key)
-    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time, gmaps=gmaps), media_type="text/event-stream")
+async def scrape_task(query: str, api_key: str, gemini_api_key: str = None, maps_api_key: str = None, language: str = 'en', max_worker: int = 1, wait_time: int = 4):
+    if api_key in keys or api_key in admin_key:
+        if api_key == admin_key[0]:
+            gemini_api_key = GEMINI_API_KEY
+        if api_key == admin_key[1]:
+            gemini_api_key = GEMINI_API_KEY
+            maps_api_key = MAPS_API_KEY
+        gmaps = None
+        if maps_api_key: gmaps = googlemaps.Client(key=maps_api_key)
+        return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time, gmaps=gmaps), media_type="text/event-stream")
+    else: return('API KEY REQUIRED')
 
 @app.get("/")
 async def read_root():
