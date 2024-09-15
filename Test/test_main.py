@@ -52,6 +52,6 @@ def test_scrape_task(query, gemini_api_key, language, max_worker, wait_time):
     index_error = response.text.count('"status": 0')
     index = response.text.count('"status": 1')
     
-    print(f"\n{index+index_error} found:\nErrors : {index_error}\nScraped : {index}")
+    print(f"\n{index+index_error} found :\n  Errors : {index_error}\n  Scraped : {index}")
     
     assert index
