@@ -12,8 +12,6 @@ from time import perf_counter
 import google.generativeai as genai
 from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
 from google.ai.generativelanguage_v1beta.types import content
-from fastapi.responses import JSONResponse
-# from stream_response import JSONStreamingResponse
 import googlemaps
 # from mangum import Mangum
 
