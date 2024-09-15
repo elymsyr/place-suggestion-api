@@ -77,9 +77,9 @@ def extract_coordinates(text):
 
     return float(latitude), float(longitude)
 
-def fetch_place_data(query, start):
+def fetch_place_data(query, start, wait_time):
     url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
-    json_result = search_google_maps(url=url, query=query, start=start)
+    json_result = search_google_maps(url=url, query=query, start=start, wait_time=wait_time)
     return query, json_result
 
 def stream_response(response, start):
@@ -106,7 +106,7 @@ def stream_response(response, start):
                         yield response_data
                     except: continue
 
-def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
+def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_time: int):
     start = perf_counter()
     genai.configure(api_key=gemini_api_key)
     model = config_model()
@@ -119,7 +119,7 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
                 places_query = f"{chunk['place_name']}, {chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}"
                 print(f"Chunk found in {chunk['timer']} s : ", places_query)            
 
-                future = executor.submit(fetch_place_data, places_query, start)
+                future = executor.submit(fetch_place_data, places_query, start, wait_time)
                 futures.append(future)
 
             except Exception as e:
@@ -133,7 +133,7 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str):
     yield f"data: {{'status': 'end_process','time': {perf_counter()-start}}}"
     return None
 
-def search_google_maps(url, query, start, wait_time: int = 5, max_instance: int = 2):
+def search_google_maps(url, query, start, wait_time: int = 5):
     with get_driver() as (driver, creation_time):
         print(f"Started at {perf_counter() - start} : ", query, "\n  ", url)
         driver.get(url)
@@ -243,8 +243,8 @@ def get_driver():
         driver.quit()
 
 @app.get("/scrap/")
-async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1):
-    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker), media_type="text/event-stream")
+async def scrape_task(query: str, gemini_api_key: str, maps_api_key: str = None, language: str = 'en', max_worker: int = 1, wait_time: int = 4):
+    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time), media_type="text/event-stream")
 
 @app.get("/")
 async def read_root():

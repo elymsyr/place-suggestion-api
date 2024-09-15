@@ -1,0 +1,56 @@
+DEFAULT 2024-09-15T00:15:39.022343Z End : 50.779680111000005
+DEFAULT 2024-09-15T00:15:39.022339Z data['status']=0
+DEFAULT 2024-09-15T00:15:39.022337Z Timer - Scraped : 45.399301468999994
+DEFAULT 2024-09-15T00:15:39.022335Z Timer - other elements : 40.331806688
+DEFAULT 2024-09-15T00:15:39.022331Z Timer - image_elements : 40.279411205
+DEFAULT 2024-09-15T00:15:39.022329Z Timer - place_name : 35.018100751999995
+DEFAULT 2024-09-15T00:15:39.022326Z Driver Created : 29.691421831000003 (0.73)
+DEFAULT 2024-09-15T00:15:39.022324Z Vondelpark (early mornings), Van Baerlestraat, West, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022321Z https://www.google.com/maps/search/Vondelpark+(early+mornings),+Van+Baerlestraat,+West,+Amsterdam,+Netherlands/?hl=en
+DEFAULT 2024-09-15T00:15:39.022318Z Started at 29.315369802000003 : Vondelpark (early mornings), Van Baerlestraat, West, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022315Z data['status']=0
+DEFAULT 2024-09-15T00:15:39.022313Z Timer - Scraped : 24.752428494000004
+DEFAULT 2024-09-15T00:15:39.022310Z Timer - other elements : 19.699532746
+DEFAULT 2024-09-15T00:15:39.022308Z Timer - image_elements : 19.621007523
+DEFAULT 2024-09-15T00:15:39.022302Z Timer - place_name : 14.25010052
+DEFAULT 2024-09-15T00:15:39.022298Z Driver Created : 9.001599807000002 (1.78)
+DEFAULT 2024-09-15T00:15:39.022294Z Artis Royal Zoo (quiet areas), Plantage Middenlaan, Oost, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022286Z data['status']=0
+DEFAULT 2024-09-15T00:15:39.022283Z Timer - Scraped : 24.656717241
+DEFAULT 2024-09-15T00:15:39.022281Z Timer - other elements : 19.587686706000003
+DEFAULT 2024-09-15T00:15:39.022278Z Timer - image_elements : 19.378950934
+DEFAULT 2024-09-15T00:15:39.022275Z Timer - place_name : 13.990851409000005
+DEFAULT 2024-09-15T00:15:39.022272Z Driver Created : 8.736536297 (1.64)
+DEFAULT 2024-09-15T00:15:39.022265Z Rijksmuseum Gardens, Museumplein, Zuid, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022260Z data['status']=0
+DEFAULT 2024-09-15T00:15:39.022255Z Timer - Scraped : 23.306050154
+DEFAULT 2024-09-15T00:15:39.022252Z Timer - other elements : 18.210559386000003
+DEFAULT 2024-09-15T00:15:39.022249Z Timer - image_elements : 18.151974868
+DEFAULT 2024-09-15T00:15:39.022247Z Timer - place_name : 12.890678972
+DEFAULT 2024-09-15T00:15:39.022244Z Driver Created : 7.495910616 (2.89)
+DEFAULT 2024-09-15T00:15:39.022242Z Begijnhof, Oudezijds Voorburgwal, Centrum, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022238Z data['status']=0
+DEFAULT 2024-09-15T00:15:39.022235Z Timer - Scraped : 23.143653211000004
+DEFAULT 2024-09-15T00:15:39.022233Z Timer - other elements : 18.031140269999998
+DEFAULT 2024-09-15T00:15:39.022230Z Timer - image_elements : 17.936479502
+DEFAULT 2024-09-15T00:15:39.022227Z Timer - place_name : 12.654677332999999
+DEFAULT 2024-09-15T00:15:39.022224Z Driver Created : 7.4550360520000005 (1.10)
+DEFAULT 2024-09-15T00:15:39.022220Z Hortus Botanicus, Hortusplantsoen, West, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022215Z https://www.google.com/maps/search/Artis+Royal+Zoo+(quiet+areas),+Plantage+Middenlaan,+Oost,+Amsterdam,+Netherlands/?hl=en
+DEFAULT 2024-09-15T00:15:39.022212Z Started at 8.493823390000003 : Artis Royal Zoo (quiet areas), Plantage Middenlaan, Oost, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022209Z https://www.google.com/maps/search/Rijksmuseum+Gardens,+Museumplein,+Zuid,+Amsterdam,+Netherlands/?hl=en
+DEFAULT 2024-09-15T00:15:39.022206Z Started at 7.921446408000001 : Rijksmuseum Gardens, Museumplein, Zuid, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022203Z Chunk found in 6.734555878000002 s : Vondelpark (early mornings), Van Baerlestraat, West, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022200Z Chunk found in 6.708997631000003 s : Artis Royal Zoo (quiet areas), Plantage Middenlaan, Oost, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022196Z https://www.google.com/maps/search/Hortus+Botanicus,+Hortusplantsoen,+West,+Amsterdam,+Netherlands/?hl=en
+DEFAULT 2024-09-15T00:15:39.022193Z Started at 6.387653262000001 : Hortus Botanicus, Hortusplantsoen, West, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022189Z Chunk found in 6.279733904 s : Rijksmuseum Gardens, Museumplein, Zuid, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022186Z https://www.google.com/maps/search/Begijnhof,+Oudezijds+Voorburgwal,+Centrum,+Amsterdam,+Netherlands/?hl=en
+DEFAULT 2024-09-15T00:15:39.022181Z Started at 6.092110368 : Begijnhof, Oudezijds Voorburgwal, Centrum, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022178Z Chunk found in 5.282461283 s : Hortus Botanicus, Hortusplantsoen, West, Amsterdam, Netherlands
+DEFAULT 2024-09-15T00:15:39.022153Z Chunk found in 3.2005717790000006 s : Begijnhof, Oudezijds Voorburgwal, Centrum, Amsterdam, Netherlands
+INFO 2024-09-15T00:15:39.013632Z [httpRequest.requestMethod: GET] [httpRequest.status: 200] [httpRequest.responseSize: 1.17 KiB] [httpRequest.latency: 30.151 s] [httpRequest.userAgent: Chrome 128.0.0.0] https://place-suggestion-api-582833569072.europe-central2.run.app/scrap/?query=I%20need%20some%20quiet%20places%20to%20spend%20time%20in%20Amsterdam&gemini_api_key=***&language=en&max_worker=4&wait_time=10
+DEFAULT 2024-09-15T00:14:33.869229Z INFO: 169.254.169.126:65175 - "GET /scrap/?query=I%20need%20some%20quiet%20places%20to%20spend%20time%20in%20Amsterdam&gemini_api_key=***&language=en&max_worker=4&wait_time=10 HTTP/1.1" 200 OK
+INFO 2024-09-15T00:14:33.852531Z [httpRequest.requestMethod: GET] [httpRequest.status: 200] [httpRequest.responseSize: 1.46 KiB] [httpRequest.latency: 50.793 s] [httpRequest.userAgent: Chrome 128.0.0.0] https://place-suggestion-api-582833569072.europe-central2.run.app/scrap/?query=I%20need%20some%20quiet%20places%20to%20spend%20time%20in%20Amsterdam&gemini_api_key=***&language=en&max_worker=4&wait_time=10
+INFO 2024-09-15T00:14:14.560253Z Default STARTUP TCP probe succeeded after 1 attempt for container "place-suggestion-api-1" on port 8080.
+DEFAULT 2024-09-15T00:14:14.559864Z INFO: Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
