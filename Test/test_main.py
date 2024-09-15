@@ -5,7 +5,7 @@ sys.path.append('Test')
 sys.path.append('Project')
 sys.path.append('API/app')
 from main import app # type: ignore
-from KEYS import GEMINI_API_KEY # type: ignore
+from KEYS import GEMINI_API_KEY, TEST_API_KEY # type: ignore
 
 # Create a TestClient using the FastAPI app
 client = TestClient(app)
@@ -13,6 +13,7 @@ client = TestClient(app)
 # Define test data
 test_query = "Best places to eat in the world"
 test_gemini_api_key = GEMINI_API_KEY
+test_api_key = TEST_API_KEY
 test_language = "en"
 test_max_worker = 2
 test_wait_time = 4
@@ -41,11 +42,11 @@ def test_read_root():
         "license": "GNU GENERAL PUBLIC LICENSE"
     }
 
-@pytest.mark.parametrize("query, gemini_api_key, language, max_worker, wait_time", [
-    (test_query, test_gemini_api_key, test_language, test_max_worker, test_wait_time)
+@pytest.mark.parametrize("query, api_key, gemini_api_key, language, max_worker, wait_time", [
+    (test_query, test_api_key, test_gemini_api_key, test_language, test_max_worker, test_wait_time)
 ])
-def test_scrape_task(query, gemini_api_key, language, max_worker, wait_time):
-    url = f"/scrap/?query={query}&gemini_api_key={gemini_api_key}&language={language}&max_worker={max_worker}&wait_time={wait_time}"
+def test_scrape_task(query, api_key, gemini_api_key, language, max_worker, wait_time):
+    url = f"/scrap/?query={query}&api_key={api_key}&gemini_api_key={gemini_api_key}&language={language}&max_worker={max_worker}&wait_time={wait_time}"
     
     response = client.get(url)
     

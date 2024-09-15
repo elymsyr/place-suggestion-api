@@ -39,8 +39,9 @@ See, [API](API).
 | Parameter | Type     | Description                |
 | :-------- | :------- | :------------------------- |
 | `query` | `string` | **Required** Query seach |
+| `api_key` | `string` | **Required** Place Suggestion API key [Request key](mailto:orhun868@gmail.com)|
 | `gemini_api_key` | `string` | **Required** GEMINI API key [Get your key](https://aistudio.google.com/app/apikey)|
-| `maps_api_key` | `string` | Enter to use Google Maps API. (Planned Feature)|
+| `maps_api_key` | `string` | Enter to use Google Maps API.|
 | `language` | `string` | **Defalut = str: 'en'** |
 | `max_worker` | `string` | **Defalut = int: 1** |
 
