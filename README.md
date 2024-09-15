@@ -44,6 +44,7 @@ See, [API](API).
 | `maps_api_key` | `string` | Enter to use Google Maps API.|
 | `language` | `string` | **Defalut = str: 'en'** |
 | `max_worker` | `string` | **Defalut = int: 1** |
+| `wait_time` | `string` | **Defalut = int: 4** |
 
 ## Usage/Examples
 
