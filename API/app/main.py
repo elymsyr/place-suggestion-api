@@ -12,6 +12,8 @@ from time import perf_counter
 import google.generativeai as genai
 from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
 from google.ai.generativelanguage_v1beta.types import content
+from fastapi.responses import JSONResponse
+# from stream_response import JSONStreamingResponse
 import googlemaps
 # from mangum import Mangum
 
@@ -137,9 +139,9 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_
         for future in futures:
             query, json_result = future.result()
             if json_result:
-                yield f"data: {json.dumps(json_result)}\n\n"
+                yield json.dumps(json_result)+"\n"
     print(f"End : {perf_counter()-start}")
-    yield f"data: {{'status': 'end_process','time': {perf_counter()-start}}}"
+    yield f"{{'status': 'end_process','time': {perf_counter()-start}}}"
     return None
 
 def search_google_maps(url, query, start, gmaps, chunk, wait_time: int = 5):
