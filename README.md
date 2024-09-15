@@ -77,7 +77,7 @@ Vondelpark:
 
 ## Running Tests
 
-Tests will be updated.
+See [test](Test/test_main.py). Run `pytest -s Test/test_main.py` for testing the api.
 
 ## Contributing
 
