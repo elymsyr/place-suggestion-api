@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
-from time import perf_counter
+from time import perf_counter, sleep
 import google.generativeai as genai
 from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
 from google.ai.generativelanguage_v1beta.types import content
@@ -137,7 +137,12 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_
 
 def search_google_maps(url, query, start, gmaps, chunk, wait_time: int = 5):
     if gmaps and chunk:
-        return search_place_with_location(f"{chunk['place_name']}", f"{chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}", gmaps)
+        try:
+            data = search_place_with_location(f"{chunk['place_name']}", f"{chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}", gmaps)            
+        except:
+            sleep(0.5)
+            data = search_place_with_location(f"{chunk['place_name']}", f"{chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}", gmaps)
+        return data
     with get_driver() as (driver, creation_time):
         print(f"Started at {perf_counter() - start} : ", query, "\n  ", url)
         driver.get(url)
@@ -219,8 +224,8 @@ def get_driver():
     start = perf_counter()
     options = Options()
     options.add_argument('--headless')
-    PROXY = "125.25.40.38:8080"
-    options.add_argument('--proxy-server=%s' % PROXY)    
+    # PROXY = "125.25.40.38:8080"
+    # options.add_argument('--proxy-server=%s' % PROXY)
     options.add_argument('--no-sandbox')
     options.add_argument("--disable-gpu")
     options.add_argument("window-size=1024,768")
