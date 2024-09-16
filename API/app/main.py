@@ -12,21 +12,17 @@ from time import perf_counter
 import google.generativeai as genai
 from fastapi import Header, HTTPException, Depends, FastAPI, status
 from typing import Optional
-from KEYS import MAPS_API_KEY, GEMINI_API_KEY
+from KEYS import MAPS_API_KEY, GEMINI_API_KEY, api_keys_list
 from google.ai.generativelanguage_v1beta.types import content
 import googlemaps
 from fastapi.security.api_key import APIKey
 from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import APIKeyHeader
-# from mangum import Mangum
 
-api_keys = ['c484s4r_53Y23M5Je4E8dlliHM25xo', 'YBY7CE5wta826M28K9u_2y5ph23qTw', '446GV7Jl7UfFk_8f73l46k8E2aWStJ', '8L6S2755wW8HsoM5miH63wx98TQBoh', '644BBr29UmLC88USvlbK2kRdCDe24E']
-admin_key = ['8L6S2755wW8HsoM5miH63wx98TQBoh', '644BBr29UmLC88USvlbK2kRdCDe24E']
-
+api_keys = api_keys_list
 apikeyheader = APIKeyHeader(name="api_key", auto_error=False)
 
 app = FastAPI()
-# handler = Mangum(app)
 
 def search_place_with_location(place_name, location, gmaps):
     """Search for a place with a location restriction."""
@@ -261,7 +257,8 @@ def get_driver():
     options.add_argument('–disable-logging')
     options.add_argument('–disable-notifications')
     options.add_argument('–disable-renderer-backgrounding')
-    
+    PROXY = "125.25.40.38:8080"
+    options.add_argument('--proxy-server=%s' % PROXY)
     driver = webdriver.Chrome(options=options)
     try:
         yield driver, perf_counter() - start
@@ -286,9 +283,9 @@ async def scrape_task(
     max_worker: int = 1,
     wait_time: int = 4
     ):
-    if api_key == admin_key[0] and not gemini_api_key:
+    if api_key == api_keys[-2] and not gemini_api_key:
         gemini_api_key = GEMINI_API_KEY
-    if api_key == admin_key[1]:
+    if api_key == api_keys[-1]:
         if not gemini_api_key: gemini_api_key = GEMINI_API_KEY
         if not maps_api_key: maps_api_key = MAPS_API_KEY
     gmaps = None
