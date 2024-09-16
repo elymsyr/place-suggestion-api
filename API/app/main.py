@@ -10,10 +10,20 @@ from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter
 import google.generativeai as genai
-from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
+from fastapi import Header, HTTPException, Depends, FastAPI, status
+from typing import Optional
+from KEYS import MAPS_API_KEY, GEMINI_API_KEY
 from google.ai.generativelanguage_v1beta.types import content
 import googlemaps
+from fastapi.security.api_key import APIKey
+from fastapi import FastAPI, HTTPException, Security
+from fastapi.security import APIKeyHeader
 # from mangum import Mangum
+
+api_keys = ['c484s4r_53Y23M5Je4E8dlliHM25xo', 'YBY7CE5wta826M28K9u_2y5ph23qTw', '446GV7Jl7UfFk_8f73l46k8E2aWStJ', '8L6S2755wW8HsoM5miH63wx98TQBoh', '644BBr29UmLC88USvlbK2kRdCDe24E']
+admin_key = ['8L6S2755wW8HsoM5miH63wx98TQBoh', '644BBr29UmLC88USvlbK2kRdCDe24E']
+
+apikeyheader = APIKeyHeader(name="api_key", auto_error=False)
 
 app = FastAPI()
 # handler = Mangum(app)
@@ -258,18 +268,32 @@ def get_driver():
     finally:
         driver.quit()
 
+def api_key_auth(api_key: str = Security(apikeyheader)) -> str:
+    if not api_key in api_keys:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API Key",
+        )
+    return api_key
+
 @app.get("/scrap/")
-async def scrape_task(query: str, api_key: str, gemini_api_key: str = None, maps_api_key: str = None, language: str = 'en', max_worker: int = 1, wait_time: int = 4):
-    if api_key in keys or api_key in admin_key:
-        if api_key == admin_key[0]:
-            gemini_api_key = GEMINI_API_KEY
-        if api_key == admin_key[1]:
-            gemini_api_key = GEMINI_API_KEY
-            maps_api_key = MAPS_API_KEY
-        gmaps = None
-        if maps_api_key: gmaps = googlemaps.Client(key=maps_api_key)
-        return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time, gmaps=gmaps), media_type="text/event-stream")
-    else: return('API KEY REQUIRED')
+async def scrape_task(
+    query: str,
+    api_key: APIKey = Depends(api_key_auth),
+    gemini_api_key: Optional[str] = Header(None),
+    maps_api_key: Optional[str] = Header(None),
+    language: str = 'en',
+    max_worker: int = 1,
+    wait_time: int = 4
+    ):
+    if api_key == admin_key[0] and not gemini_api_key:
+        gemini_api_key = GEMINI_API_KEY
+    if api_key == admin_key[1]:
+        if not gemini_api_key: gemini_api_key = GEMINI_API_KEY
+        if not maps_api_key: maps_api_key = MAPS_API_KEY
+    gmaps = None
+    if maps_api_key: gmaps = googlemaps.Client(key=maps_api_key)
+    return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time, gmaps=gmaps), media_type="text/event-stream")
 
 @app.get("/")
 async def read_root():
