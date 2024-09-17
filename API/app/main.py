@@ -10,10 +10,46 @@ from selenium.webdriver.support.ui import WebDriverWait
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter, sleep
 import google.generativeai as genai
-from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
+from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY, PROXY_TOKEN
 from google.ai.generativelanguage_v1beta.types import content
 import googlemaps
+from selenium.webdriver.common.proxy import Proxy
+from selenium.webdriver.common.proxy import ProxyType
 
+
+username = PROXY_TOKEN
+password = "customHeaders=false"
+
+formatted_proxy = f"http://{username}:{password}@proxy.scrape.do:8080"
+
+options = webdriver.ChromeOptions()
+
+chrome_prefs = {
+    "profile.default_content_setting_values": {
+        "images": 2,
+        "javascript": 2,
+    }
+}
+options.experimental_options["prefs"] = chrome_prefs
+
+options.proxy = Proxy({ 'proxyType': ProxyType.MANUAL, 'httpProxy' : formatted_proxy})
+options.add_argument('--headless')
+options.add_argument('--no-sandbox')
+options.add_argument("--disable-gpu")
+options.add_argument("window-size=1024,768")
+options.add_argument("--disable-images")
+options.add_argument("--disk-cache-size=0")
+options.add_argument('--disable-dev-shm-usage')
+options.add_argument('–disable-background-networking')
+options.add_argument('–disable-checker-imaging')
+options.add_argument('–disable-component-extensions-with-background-pages')
+options.add_argument('–disable-datasaver-prompt')
+options.add_argument('–disable-dev-shm-usage')
+options.add_argument('–disable-domain-reliability')
+options.add_argument('–disable-logging')
+options.add_argument('–disable-notifications')
+options.add_argument('–disable-renderer-backgrounding')
+    
 app = FastAPI()
 
 def search_place_with_location(place_name, location, gmaps):
@@ -217,31 +253,12 @@ def scrap_data(url, query, start, wait_time, driver, creation_time):
             new_url = a_element.get_attribute("href")
             return data, new_url if new_url and isinstance(new_url, str) and new_url.startswith('https://www.google.com/maps') else []
         except: pass
+    print(driver.page_source)
     return data, []
 
 @contextmanager
 def get_driver():
     start = perf_counter()
-    options = Options()
-    options.add_argument('--headless')
-    # PROXY = "125.25.40.38:8080"
-    # options.add_argument('--proxy-server=%s' % PROXY)
-    options.add_argument('--no-sandbox')
-    options.add_argument("--disable-gpu")
-    options.add_argument("window-size=1024,768")
-    options.add_argument("--disable-images")
-    options.add_argument("--disk-cache-size=0")
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('–disable-background-networking')
-    options.add_argument('–disable-checker-imaging')
-    options.add_argument('–disable-component-extensions-with-background-pages')
-    options.add_argument('–disable-datasaver-prompt')
-    options.add_argument('–disable-dev-shm-usage')
-    options.add_argument('–disable-domain-reliability')
-    options.add_argument('–disable-logging')
-    options.add_argument('–disable-notifications')
-    options.add_argument('–disable-renderer-backgrounding')
-    
     driver = webdriver.Chrome(options=options)
     try:
         yield driver, perf_counter() - start
