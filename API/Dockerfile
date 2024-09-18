@@ -4,16 +4,6 @@ WORKDIR /code
 
 ENV HOST=0.0.0.0
 
-COPY ./google-chrome-stable_current_amd64.deb /code/google-chrome-stable_current_amd64.deb
-COPY ./chrome-linux64.zip /code/chrome-linux64.zip
-
-RUN apt-get update -qq -y && \
-    apt-get install -y --no-install-recommends unzip && \
-    unzip chrome-linux64.zip && \
-    mv chrome-linux64 /usr/bin/ && \
-    apt-get install -y --no-install-recommends ./google-chrome-stable_current_amd64.deb && \
-    rm -rf chrome-linux64.zip google-chrome-stable_current_amd64.deb /var/lib/apt/lists/*
-
 COPY ./requirements.txt /code/requirements.txt
 COPY ./KEYS.py /code/KEYS.py
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt

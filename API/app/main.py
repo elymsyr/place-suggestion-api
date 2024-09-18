@@ -1,61 +1,13 @@
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-import json, re, traceback
-from selenium import webdriver
-from contextlib import contextmanager
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
+import json, traceback
 from concurrent.futures import ThreadPoolExecutor
 from time import perf_counter, sleep
 import google.generativeai as genai
-from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY, PROXY_TOKEN
+from KEYS import keys, admin_key, MAPS_API_KEY, GEMINI_API_KEY
 from google.ai.generativelanguage_v1beta.types import content
 import googlemaps
-from selenium.webdriver.common.proxy import Proxy
-from selenium.webdriver.common.proxy import ProxyType
-
-
-username = PROXY_TOKEN
-password = "customHeaders=false"
-
-formatted_proxy = f"http://{username}:{password}@proxy.scrape.do:8080"
-
-options = webdriver.ChromeOptions()
-
-chrome_prefs = {
-    "profile.default_content_setting_values": {
-        "images": 2,
-        "javascript": 2,
-    }
-}
-options.experimental_options["prefs"] = chrome_prefs
-
-options.proxy = Proxy({ 'proxyType': ProxyType.MANUAL, 'httpProxy' : formatted_proxy})
-options.add_argument('--headless')
-options.add_argument('--no-sandbox')
-options.add_argument("--disable-gpu")
-options.add_argument("window-size=1024,768")
-options.add_argument("--disable-images")
-options.add_argument("--disk-cache-size=0")
-options.add_argument('--disable-dev-shm-usage')
-options.add_argument('–disable-background-networking')
-options.add_argument('–disable-checker-imaging')
-options.add_argument('–disable-component-extensions-with-background-pages')
-options.add_argument('–disable-datasaver-prompt')
-options.add_argument('–disable-dev-shm-usage')
-options.add_argument('–disable-domain-reliability')
-options.add_argument('–disable-logging')
-options.add_argument('–disable-notifications')
-options.add_argument('–disable-renderer-backgrounding')
     
 app = FastAPI()
-
-def search_place_with_location(place_name, location, gmaps):
-    """Search for a place with a location restriction."""
-    results = gmaps.places(query=place_name, location=location)
-    return results
 
 def config_model():
     generation_config = {
@@ -97,31 +49,6 @@ def config_model():
     }
     return genai.GenerativeModel(model_name="gemini-1.5-pro",generation_config=generation_config)
 
-def extract_coordinates(text):
-    # Regular expression patterns for both formats
-    pattern_1 = r'!3d([-+]?\d*\.\d+)!4d([-+]?\d*\.\d+)!'  # Pattern for '!3d<lat>!4d<lon>!'
-    pattern_2 = r'@([-+]?\d*\.\d+),([-+]?\d*\.\d+),'       # Pattern for '@<lat>,<lon>,'
-    
-    # Check the text against both patterns
-    match_1 = re.search(pattern_1, text)
-    match_2 = re.search(pattern_2, text)
-    
-    if match_1:
-        # Extract coordinates from the first pattern
-        latitude, longitude = match_1.groups()
-    elif match_2:
-        # Extract coordinates from the second pattern
-        latitude, longitude = match_2.groups()
-    else:
-        # Return None if no coordinates found
-        return None, None
-    return float(latitude), float(longitude)
-
-def fetch_place_data(query, start, wait_time, gmaps = None, chunk=None):
-    url = f"https://www.google.com/maps/search/{query.replace(' ', '+')}/?hl=en"
-    json_result = search_google_maps(url=url, query=query, start=start, wait_time=wait_time, gmaps= gmaps if gmaps else None, chunk= chunk if chunk else None)
-    return query, json_result
-
 def stream_response(response, start):
     buffer: str = ""
     collecting = False
@@ -146,137 +73,61 @@ def stream_response(response, start):
                         yield response_data
                     except: continue
 
-def scrap(query: str, gemini_api_key: str, max_worker: int, language: str, wait_time: int, gmaps = None):
+def scrap(query: str, gemini_api_key: str, max_worker: int, gmaps, location: str = None):
     start = perf_counter()
-    if max_worker > 10: max_worker = 10 ; print('Max worker is set to 10.')
-    if max_worker < 1: max_worker = 1 ; print('Max worker is set to 1.')
     genai.configure(api_key=gemini_api_key)
     model = config_model()
+    data = {}
+    from_api = {}
     with ThreadPoolExecutor(max_workers=int(max_worker)) as executor:
         futures = []
-        
-        for chunk in stream_response(model.generate_content(f"{query} ({language=})", stream=True), start=start):
+        for chunk in stream_response(model.generate_content(f"{query} (Current location: {location})", stream=True), start=start):
             try:
                 places_query = f"{chunk['place_name']}, {chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}"
                 print(f"Chunk found in {chunk['timer']} s : ", places_query)            
-                future = executor.submit(fetch_place_data, places_query, start, wait_time, gmaps if gmaps else None, chunk)
+                future = executor.submit(search_google_maps, gmaps, chunk)
                 futures.append(future)
             except Exception as e:
                 print(e, traceback.format_exc())
         for future in futures:
-            query, json_result = future.result()
+            json_result, chunk_got = future.result()
             if json_result:
-                yield json.dumps(json_result)+"\n"
+                json_result['chunk_name'] = chunk_got
+                from_api[f"{chunk_got['place_name']}, {chunk_got['only_street_name']}, {chunk_got['only_district_name']}, {chunk_got['only_city_name']}, {chunk_got['only_country_name']}"] = json_result
     print(f"End : {perf_counter()-start}")
-    yield f"{{'status': 'end_process','time': {perf_counter()-start}}}"
-    return None
+    data['status'] =  1
+    data['end_time'] = perf_counter()-start
+    data['response'] = from_api
+    return data
 
-def search_google_maps(url, query, start, gmaps, chunk, wait_time: int = 5):
-    if gmaps and chunk:
-        try:
-            data = search_place_with_location(f"{chunk['place_name']}", f"{chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}", gmaps)            
-        except:
-            sleep(0.5)
-            data = search_place_with_location(f"{chunk['place_name']}", f"{chunk['only_street_name']}, {chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}", gmaps)
-        return data
-    with get_driver() as (driver, creation_time):
-        print(f"Started at {perf_counter() - start} : ", query, "\n  ", url)
-        driver.get(url)
-        data, new_url = scrap_data(url, query, start, wait_time, driver, creation_time)
-        if new_url: 
-            driver.get(new_url)
-            data, new_url = scrap_data(new_url, query, start, wait_time, driver, creation_time)
-        return data
-
-def scrap_data(url, query, start, wait_time, driver, creation_time):
-    xpaths = {
-        'place_name': "//div[contains(@class, 'tTVLSc')]//h1",
-        'place_name_2': "//div[contains(@class, 'lMbq3e')]//h1",
-        'image_elements': "//div[contains(@class, 'tTVLSc')]//img",
-        'place_type': "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]",
-        'place_type_back': "//div[contains(@class, 'skqShb')]",
-        'price_elements': "//span[contains(@aria-label, 'Price')]",
-        'if_result_url': "//div/a[contains(@class, 'hfpxzc')]",
-        'patrial_matches': "//div[contains(@class, 'Bt0TOd')]"
-    }    
-    data = {'status': 1}
-    timers = f"\n{query}\nDriver Created : {perf_counter() - start} ({creation_time:.2f})"
+def search_google_maps(gmaps, chunk):
     try:
-        WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['place_name'])))
-        place_name_elements = driver.find_elements(By.XPATH, xpaths['place_name'])
-        place_name = place_name_elements[0].text if place_name_elements else None    
-        data['place_name'] = place_name
-    except: data['status'] = 0
-    timers += f"\nTimer - place_name : {perf_counter() - start}"
-    try:
-        WebDriverWait(driver, wait_time).until(EC.presence_of_element_located((By.XPATH, xpaths['image_elements'])))
-        prefixes = ("https://lh5.googleusercontent.com/p/", "https://streetviewpixels-pa.googleapis.com")
-        image_elements = driver.find_elements(By.XPATH, xpaths['image_elements'])
-        image = [image.get_attribute('src') for image in image_elements if image.get_attribute('src').startswith(prefixes)] if image_elements else None
-        data['image'] = image
-    except: data['status'] = 0
-    timers += f"\nTimer - image_elements : {perf_counter() - start}"
-    patrial_matches_elements = driver.find_elements(By.XPATH, xpaths['patrial_matches'])
-    if patrial_matches_elements:
-        patrial_matches = [element.text for element in patrial_matches_elements][0]
-        if patrial_matches and 'partial match'.strip() in patrial_matches.lower().strip(): return f"Partial matches found : {query}"
-    place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]//button[contains(@class, 'DkEaL')]")
-    place_type = place_type_elements[0].text if place_type_elements else None
-    data['place_type'] = place_type
-    if place_type is None or place_type == '':
-        place_type_elements = driver.find_elements(By.XPATH, "//div[contains(@class, 'skqShb')]")
-        place_type = place_type_elements[0].text if place_type_elements else None
-    price_elements = driver.find_elements(By.XPATH, "//span[contains(@aria-label, 'Price')]")
-    price = price_elements[0].text if price_elements else None
-    data['price'] = price
-    timers += f"\nTimer - other elements : {perf_counter() - start}"
-    try:
-        WebDriverWait(driver, wait_time).until(lambda driver: driver.current_url.startswith('https://www.google.com/maps/place'))
-        data['url'] = driver.current_url
-        data['coordinate'] = extract_coordinates(data['url'])
-        print(f"Url loaded successfully : {perf_counter() - start} ", query, url)
+        data = gmaps.places(query=f"{chunk['place_name']}", location=f"{chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}")
+        return data, chunk
     except:
-        data['status'] = 0
-    timers += f"\nTimer - Scraped : {perf_counter() - start}"
-    timers += f"\n{data['status']=}\n"
-    print(timers)
-    
-    if data['status'] == 0:
-        
-        data['response'] = query
-        if 'url' not in data.keys(): data['url'] = url
-        
         try:
-            a_element = WebDriverWait(driver, wait_time).until(
-                EC.presence_of_element_located((By.XPATH, "//div/a[contains(@class, 'hfpxzc')]"))
-            )
-            new_url = a_element.get_attribute("href")
-            return data, new_url if new_url and isinstance(new_url, str) and new_url.startswith('https://www.google.com/maps') else []
-        except: pass
-    print(driver.page_source)
-    return data, []
-
-@contextmanager
-def get_driver():
-    start = perf_counter()
-    driver = webdriver.Chrome(options=options)
-    try:
-        yield driver, perf_counter() - start
-    finally:
-        driver.quit()
+            sleep(0.5)
+            data = gmaps.places(query=f"{chunk['place_name']}", location=f"{chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}")
+            return data, chunk
+        except:
+            try:
+                sleep(0.8)
+                data = gmaps.places(query=f"{chunk['place_name']}", location=f"{chunk['only_district_name']}, {chunk['only_city_name']}, {chunk['only_country_name']}")            
+                return data, chunk
+            except:
+                return {'status': 'maps api error'}
 
 @app.get("/scrap/")
-async def scrape_task(query: str, api_key: str, gemini_api_key: str = None, maps_api_key: str = None, language: str = 'en', max_worker: int = 1, wait_time: int = 4):
-    if api_key in keys or api_key in admin_key:
-        if api_key == admin_key[0]:
-            gemini_api_key = GEMINI_API_KEY
-        if api_key == admin_key[1]:
-            gemini_api_key = GEMINI_API_KEY
-            maps_api_key = MAPS_API_KEY
-        gmaps = None
-        if maps_api_key: gmaps = googlemaps.Client(key=maps_api_key)
-        return StreamingResponse(scrap(query=query, gemini_api_key=gemini_api_key, language=language, max_worker=max_worker, wait_time=wait_time, gmaps=gmaps), media_type="text/event-stream")
-    else: return('API KEY REQUIRED')
+async def scrape_task(query: str, api_key: str, gemini_api_key: str = None, maps_api_key: str = None, location: str = None, max_worker: int = 6):
+    if api_key in keys+[admin_key]:
+        if api_key == admin_key:
+            if not gemini_api_key: gemini_api_key = GEMINI_API_KEY
+            if not maps_api_key: maps_api_key = MAPS_API_KEY
+        elif not maps_api_key or not gemini_api_key:
+            return{"status": "Authentication error"}
+        gmaps = googlemaps.Client(key=maps_api_key)
+        return scrap(query=query, gemini_api_key=gemini_api_key, location=location if location else None, max_worker=max_worker, gmaps=gmaps)
+    else: return{"status": "Authentication error"}
 
 @app.get("/")
 async def read_root():
