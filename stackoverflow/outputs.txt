@@ -1,9 +1,0 @@
-data: {"status": 0, "place_type": null, "price": null, "response": "Begijnhof, Oudezijds Voorburgwal, Centrum, Amsterdam, Netherlands", "url": "https://www.google.com/maps/search/Begijnhof,+Oudezijds+Voorburgwal,+Centrum,+Amsterdam,+Netherlands/?hl=en"}
-
-data: {"status": 0, "place_type": null, "price": null, "response": "Hortus Botanicus, Hortusplantsoen, West, Amsterdam, Netherlands", "url": "https://www.google.com/maps/search/Hortus+Botanicus,+Hortusplantsoen,+West,+Amsterdam,+Netherlands/?hl=en"}
-
-data: {"status": 0, "place_type": null, "price": null, "response": "Rijksmuseum Gardens, Museumplein, Zuid, Amsterdam, Netherlands", "url": "https://www.google.com/maps/search/Rijksmuseum+Gardens,+Museumplein,+Zuid,+Amsterdam,+Netherlands/?hl=en"}
-
-data: {"status": 0, "place_type": null, "price": null, "response": "Artis Zoo Library, Plantage Middenlaan, Oost, Amsterdam, Netherlands", "url": "https://www.google.com/maps/search/Artis+Zoo+Library,+Plantage+Middenlaan,+Oost,+Amsterdam,+Netherlands/?hl=en"}
-
-data: {'status': 'end_process','time': 50.779680111000005}
