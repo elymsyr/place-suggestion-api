@@ -92,7 +92,6 @@ def scrap(query: str, gemini_api_key: str, max_worker: int, gmaps, location: str
         for future in futures:
             json_result, chunk_got = future.result()
             if json_result:
-                json_result['chunk_name'] = chunk_got
                 from_api[f"{chunk_got['place_name']}, {chunk_got['only_street_name']}, {chunk_got['only_district_name']}, {chunk_got['only_city_name']}, {chunk_got['only_country_name']}"] = json_result
     print(f"End : {perf_counter()-start}")
     data['status'] =  1
